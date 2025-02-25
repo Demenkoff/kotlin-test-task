@@ -1,0 +1,46 @@
+#version: '3.8'
+
+services:
+  mysql:
+    image: mysql:5.7
+    container_name: mysql-container
+    environment:
+      MYSQL_ROOT_PASSWORD: root_ps
+      MYSQL_DATABASE: osint_db
+      MYSQL_USER: osint_user
+      MYSQL_PASSWORD: osint_user_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./src/main/resources/:/docker-entrypoint-initdb.d/:ro
+      - mysql_data:/var/lib/mysql
+    networks:
+      - mysql-network
+    healthcheck:
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+      timeout: 20s
+      retries: 10
+
+  app:
+    image: osint/test
+    container_name: osint-container
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: osint_user
+      MYSQL_PASSWORD: osint_user_password
+      MYSQL_DATABASE: osint_db
+    ports:
+      - "8080:8080"
+    networks:
+      - mysql-network
+
+volumes:
+  mysql_data:
+
+networks:
+  mysql-network:
+    driver: bridge
